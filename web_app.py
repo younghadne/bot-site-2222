@@ -1,3 +1,7 @@
+import eventlet
+
+eventlet.monkey_patch()
+
 import glob
 import os
 import random
@@ -781,6 +785,18 @@ def on_comment(data):
     limit = int(data.get("limit", 10))
     threading.Thread(
         target=do_auto_comment, args=(target, comments_list, limit), daemon=True
+    ).start()
+
+
+@socketio.on("welcome_dm")
+def on_welcome_dm(data):
+    if not bot_state["cl"]:
+        emit("login_status", {"success": False, "error": "Please log in first"})
+        return
+    msg = data.get("message", "").strip() or "Hey! Thanks for following me 🙏"
+    limit = int(data.get("limit", 20))
+    threading.Thread(
+        target=do_auto_dm_following, args=(msg, limit), daemon=True
     ).start()
 
 
