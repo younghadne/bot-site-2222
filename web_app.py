@@ -44,7 +44,9 @@ bot_state = {
 
 def log(message):
     timestamp = datetime.now().strftime("%H:%M:%S")
-    socketio.emit("log", {"message": f"[{timestamp}] {message}"})
+    formatted = f"[{timestamp}] {message}"
+    print(formatted, flush=True)  # shows in Render server logs
+    socketio.emit("log", {"message": formatted})
 
 
 def update_stats():
@@ -554,6 +556,11 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/health")
+def health():
+    return {"status": "ok", "logged_in": bot_state["username"] is not None}
+
+
 # ── Socket events ─────────────────────────────────────────────────────────────
 
 
@@ -791,9 +798,15 @@ def on_reset():
     emit("stats", bot_state["stats"])
 
 
+print("🚀 Instagram Bot starting up...", flush=True)
+print(f"🌍 Environment: {os.environ.get('FLASK_ENV', 'development')}", flush=True)
+print(f"📁 Sessions dir: {os.path.abspath('sessions')}", flush=True)
+os.makedirs("sessions", exist_ok=True)
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     debug = os.environ.get("FLASK_ENV") != "production"
+    print(f"🔌 Starting on port {port}", flush=True)
     socketio.run(
         app, host="0.0.0.0", port=port, debug=debug, allow_unsafe_werkzeug=True
     )
