@@ -1,15 +1,11 @@
 services:
   - type: web
     name: instagram-bot
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT web_app:app
+    runtime: docker
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
       - key: FLASK_ENV
         value: production
-    disk:
-      name: sessions
-      mountPath: /app/sessions
-      sizeGB: 1
+      - key: PORT
+        value: 10000
