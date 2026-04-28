@@ -3,7 +3,7 @@ services:
     name: instagram-bot
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT web_app:app
+    startCommand: python -m gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT web_app:app
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
