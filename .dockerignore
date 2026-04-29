@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+sessions
+*.log
+bot.log
+__pycache__
+*.pyc
+.DS_Store
+.venv
+venv
+instagram-bot-DEPLOY.zip

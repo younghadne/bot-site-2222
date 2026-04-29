@@ -13,4 +13,4 @@ RUN mkdir -p sessions
 EXPOSE 10000
 
 # Use shell form so $PORT env var is expanded at runtime
-CMD sh -c "gunicorn -w 1 --threads 100 --bind 0.0.0.0:${PORT:-10000} --timeout 120 web_app:app"
+CMD sh -c "gunicorn --worker-class gthread -w 1 --threads 100 --bind 0.0.0.0:${PORT:-10000} --timeout 120 --access-logfile - --error-logfile - --capture-output web_app:app"

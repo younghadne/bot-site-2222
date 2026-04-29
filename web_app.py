@@ -5,7 +5,7 @@ import threading
 import time
 from datetime import datetime
 
-from flask import Flask, render_template
+from flask import Flask, jsonify, render_template, request
 from flask_socketio import SocketIO, emit
 from instagrapi import Client
 from instagrapi.exceptions import (
@@ -14,11 +14,20 @@ from instagrapi.exceptions import (
     FeedbackRequired,
     LoginRequired,
     PleaseWaitFewMinutes,
+    TwoFactorRequired,
 )
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="threading",
+    logger=True,
+    engineio_logger=True,
+    ping_timeout=60,
+    ping_interval=25,
+)
 
 bot_state = {
     "running": False,
@@ -39,14 +48,29 @@ bot_state = {
     },
 }
 
+log_buffer = []
+MAX_LOG_LINES = 300
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
 def log(message):
     timestamp = datetime.now().strftime("%H:%M:%S")
     formatted = f"[{timestamp}] {message}"
-    print(formatted, flush=True)  # shows in Render server logs
+    print(formatted, flush=True)  # shows in Railway/Render server logs
+    log_buffer.append(formatted)
+    if len(log_buffer) > MAX_LOG_LINES:
+        del log_buffer[:-MAX_LOG_LINES]
     socketio.emit("log", {"message": formatted})
+
+
+def make_client():
+    cl = Client()
+    cl.delay_range = [3, 7]
+    proxy_url = os.environ.get("IG_PROXY_URL") or os.environ.get("PROXY_URL")
+    if proxy_url:
+        cl.set_proxy(proxy_url)
+    return cl
 
 
 def update_stats():
@@ -68,8 +92,7 @@ def load_saved_session():
         if not main:
             return False
         latest = max(main, key=os.path.getmtime)
-        cl = Client()
-        cl.delay_range = [3, 7]
+        cl = make_client()
         cl.load_settings(latest)
         user_info = cl.account_info()
         username = user_info.username
@@ -93,8 +116,7 @@ def try_recover_session():
             socketio.emit("session_expired", {})
             return False
         latest = max(files, key=os.path.getmtime)
-        cl = Client()
-        cl.delay_range = [3, 7]
+        cl = make_client()
         cl.load_settings(latest)
         cl.get_timeline_feed()
         user_info = cl.account_info()
@@ -561,12 +583,34 @@ def health():
     return {"status": "ok", "logged_in": bot_state["username"] is not None}
 
 
+@app.route("/api/status")
+def api_status():
+    return jsonify(
+        {
+            "ok": True,
+            "running": bot_state["running"],
+            "feature_running": bot_state["feature_running"],
+            "logged_in": bot_state["username"] is not None,
+            "username": bot_state["username"],
+            "stats": bot_state["stats"],
+        }
+    )
+
+
+@app.route("/api/logs")
+def api_logs():
+    return jsonify({"logs": log_buffer[-MAX_LOG_LINES:]})
+
+
 # ── Socket events ─────────────────────────────────────────────────────────────
 
 
 @socketio.on("connect")
 def on_connect():
+    for line in log_buffer[-80:]:
+        emit("log", {"message": line})
     emit("bot_status", {"running": bot_state["running"]})
+    emit("feature_status", {"running": bot_state["feature_running"], "name": "Feature"})
     emit("stats", bot_state["stats"])
     if not bot_state["cl"]:
         if load_saved_session():
@@ -591,21 +635,49 @@ def on_login(data):
 
     def _login():
         try:
-            cl = Client()
-            cl.delay_range = [3, 7]
+            log(f"🔐 Login attempt for @{username}...")
+            cl = make_client()
             bot_state["pending_cl"] = cl
             bot_state["pending_username"] = username
             bot_state["pending_password"] = password
             try:
                 cl.login(username, password)
+            except TwoFactorRequired:
+                log(f"🔐 2FA required for @{username}")
+                socketio.emit("two_fa_required", {"required": True})
+                return
+            except ChallengeRequired:
+                log(
+                    "⚠️ Instagram challenge required. Open Instagram on your phone/browser, verify the login, then try again."
+                )
+                socketio.emit(
+                    "login_status",
+                    {
+                        "success": False,
+                        "error": "Instagram challenge required — verify in Instagram, then try again.",
+                    },
+                )
+                return
             except Exception as e:
                 err = str(e).lower()
-                if any(
-                    w in err
-                    for w in ["two", "factor", "challenge", "verification", "code"]
-                ):
+                if any(w in err for w in ["two", "factor", "verification", "code"]):
                     log(f"🔐 2FA required for @{username}")
                     socketio.emit("two_fa_required", {"required": True})
+                    return
+                if any(
+                    w in err
+                    for w in ["challenge", "checkpoint", "suspicious", "verify"]
+                ):
+                    log(
+                        "⚠️ Instagram blocked/challenged the Railway login. Verify the account in Instagram or set IG_PROXY_URL to a residential/mobile proxy."
+                    )
+                    socketio.emit(
+                        "login_status",
+                        {
+                            "success": False,
+                            "error": "Instagram blocked/challenged this cloud login. Verify Instagram or use IG_PROXY_URL.",
+                        },
+                    )
                     return
                 raise
             os.makedirs("sessions", exist_ok=True)
@@ -615,10 +687,28 @@ def on_login(data):
             log(f"✅ Logged in as @{username}")
             socketio.emit("login_status", {"success": True, "username": username})
         except Exception as e:
-            log(f"❌ Login failed: {str(e)[:100]}")
-            socketio.emit("login_status", {"success": False, "error": str(e)[:80]})
+            err_msg = str(e)[:160]
+            log(f"❌ Login failed: {err_msg}")
+            socketio.emit("login_status", {"success": False, "error": err_msg})
 
     threading.Thread(target=_login, daemon=True).start()
+
+
+@socketio.on("password_login")
+def on_password_login(data):
+    # Backward compatibility for older frontend builds/cached browsers.
+    return on_login(data)
+
+
+@socketio.on("browser_login")
+def on_browser_login(data=None):
+    emit(
+        "login_status",
+        {
+            "success": False,
+            "error": "Browser login is not available on Railway. Use username/password login.",
+        },
+    )
 
 
 @socketio.on("two_fa_code")
@@ -718,6 +808,8 @@ def on_unfollow(data):
 @socketio.on("auto_like_feed")
 def on_like_feed(data):
     if not bot_state["cl"]:
+        log("❌ Please log in to Instagram first")
+        emit("login_status", {"success": False, "error": "Please log in first"})
         return
     threading.Thread(
         target=do_auto_like_feed, args=(int(data.get("limit", 20)),), daemon=True
@@ -727,6 +819,8 @@ def on_like_feed(data):
 @socketio.on("mass_story_view")
 def on_story(data):
     if not bot_state["cl"]:
+        log("❌ Please log in to Instagram first")
+        emit("login_status", {"success": False, "error": "Please log in first"})
         return
     threading.Thread(
         target=do_mass_story_view, args=(int(data.get("limit", 50)),), daemon=True
@@ -736,6 +830,8 @@ def on_story(data):
 @socketio.on("auto_dm")
 def on_dm(data):
     if not bot_state["cl"]:
+        log("❌ Please log in to Instagram first")
+        emit("login_status", {"success": False, "error": "Please log in first"})
         return
     msg = data.get("message", "") or "Hey! Thanks for following 🙏"
     target = data.get("target", "").strip()
@@ -751,6 +847,8 @@ def on_dm(data):
 @socketio.on("approve_requests")
 def on_approve():
     if not bot_state["cl"]:
+        log("❌ Please log in to Instagram first")
+        emit("login_status", {"success": False, "error": "Please log in first"})
         return
     threading.Thread(target=do_approve_requests, daemon=True).start()
 
@@ -758,6 +856,8 @@ def on_approve():
 @socketio.on("like_user_posts")
 def on_like_user(data):
     if not bot_state["cl"]:
+        log("❌ Please log in to Instagram first")
+        emit("login_status", {"success": False, "error": "Please log in first"})
         return
     target = data.get("target", "").strip()
     if not target:
@@ -771,6 +871,8 @@ def on_like_user(data):
 @socketio.on("auto_comment")
 def on_comment(data):
     if not bot_state["cl"]:
+        log("❌ Please log in to Instagram first")
+        emit("login_status", {"success": False, "error": "Please log in first"})
         return
     target = data.get("target", "").strip()
     if not target:
@@ -810,15 +912,15 @@ def on_reset():
     emit("stats", bot_state["stats"])
 
 
-print("🚀 Instagram Bot starting up...", flush=True)
-print(f"🌍 Environment: {os.environ.get('FLASK_ENV', 'development')}", flush=True)
-print(f"📁 Sessions dir: {os.path.abspath('sessions')}", flush=True)
+log("🚀 Instagram Bot starting up...")
+log(f"🌍 Environment: {os.environ.get('FLASK_ENV', 'development')}")
+log(f"📁 Sessions dir: {os.path.abspath('sessions')}")
 os.makedirs("sessions", exist_ok=True)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     debug = os.environ.get("FLASK_ENV") != "production"
-    print(f"🔌 Starting on port {port}", flush=True)
+    log(f"🔌 Starting on port {port}")
     socketio.run(
         app, host="0.0.0.0", port=port, debug=debug, allow_unsafe_werkzeug=True
     )
