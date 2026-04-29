@@ -1,5 +1,7 @@
 flask>=3.0.0
 flask-socketio>=5.0.0
+simple-websocket>=1.0.0
 instagrapi>=2.0.0
-selenium>=4.0.0
-webdriver-manager>=4.0.0
+python-dotenv>=1.0.0
+cryptography>=41.0.0
+gunicorn>=21.0.0

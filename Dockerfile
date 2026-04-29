@@ -2,12 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements-web.txt .
-RUN pip install --no-cache-dir -r requirements-web.txt
+# Support both requirements.txt and requirements-web.txt filenames
+COPY requirements*.txt ./
+RUN pip install --no-cache-dir -r requirements.txt 2>/dev/null || pip install --no-cache-dir -r requirements-web.txt
 
-COPY web_app.py .
-COPY templates/ ./templates/
+COPY . .
 
-EXPOSE 5000
+RUN mkdir -p sessions
 
-CMD ["python", "web_app.py"]
+EXPOSE 10000
+
+# Use shell form so $PORT env var is expanded at runtime
+CMD sh -c "gunicorn -w 1 --threads 100 --bind 0.0.0.0:${PORT:-10000} --timeout 120 web_app:app"
