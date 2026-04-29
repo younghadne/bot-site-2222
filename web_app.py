@@ -913,13 +913,13 @@ def on_reset():
 
 
 log("🚀 Instagram Bot starting up...")
-log(f"🌍 Environment: {os.environ.get('FLASK_ENV', 'development')}")
+log(f"🌍 Environment: {os.environ.get('FLASK_ENV', 'production')}")
 log(f"📁 Sessions dir: {os.path.abspath('sessions')}")
 os.makedirs("sessions", exist_ok=True)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    debug = os.environ.get("FLASK_ENV") != "production"
+    debug = os.environ.get("FLASK_ENV", "production") != "production"
     log(f"🔌 Starting on port {port}")
     socketio.run(
         app, host="0.0.0.0", port=port, debug=debug, allow_unsafe_werkzeug=True
