@@ -70,6 +70,9 @@ def make_client():
     proxy_url = os.environ.get("IG_PROXY_URL") or os.environ.get("PROXY_URL")
     if proxy_url:
         cl.set_proxy(proxy_url)
+        log("🌐 Instagram proxy detected and enabled")
+    else:
+        log("⚠️ No IG_PROXY_URL set — Railway/Render IPs are often blocked by Instagram")
     return cl
 
 
@@ -666,16 +669,24 @@ def on_login(data):
                     return
                 if any(
                     w in err
-                    for w in ["challenge", "checkpoint", "suspicious", "verify"]
+                    for w in [
+                        "challenge",
+                        "checkpoint",
+                        "suspicious",
+                        "verify",
+                        "blacklis",
+                        "ip address",
+                        "linked facebook",
+                    ]
                 ):
                     log(
-                        "⚠️ Instagram blocked/challenged the Railway login. Verify the account in Instagram or set IG_PROXY_URL to a residential/mobile proxy."
+                        "🚫 Instagram rejected this login because the Railway/cloud IP is blocked. Add IG_PROXY_URL with a residential/mobile proxy, then redeploy."
                     )
                     socketio.emit(
                         "login_status",
                         {
                             "success": False,
-                            "error": "Instagram blocked/challenged this cloud login. Verify Instagram or use IG_PROXY_URL.",
+                            "error": "Instagram blocked Railway's IP. Add IG_PROXY_URL with a residential/mobile proxy, then redeploy.",
                         },
                     )
                     return
