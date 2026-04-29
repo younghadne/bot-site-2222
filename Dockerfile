@@ -2,13 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-web.txt .
+RUN pip install --no-cache-dir -r requirements-web.txt
 
-COPY . .
+COPY web_app.py .
+COPY templates/ ./templates/
 
-RUN mkdir -p sessions
+EXPOSE 5000
 
-EXPOSE 10000
-
-CMD ["python", "-m", "gunicorn", "-w", "1", "--threads", "100", "--bind", "0.0.0.0:10000", "--timeout", "120", "web_app:app"]
+CMD ["python", "web_app.py"]

@@ -1,39 +1,73 @@
-# Instagram Bot
+# Instagram Bot Web App
 
-A web-based Instagram automation bot with a real-time dashboard.
+A web-based Instagram automation bot with multiple features including auto-follow, auto-unfollow, auto-like, mass story viewing, and DM automation.
 
 ## Features
-- Auto Follow from target accounts
-- Welcome DM to every followed user
-- Auto Unfollow
-- Auto Like Feed
-- Mass Story View
-- Auto DM
-- Auto Comment
-- Approve Follow Requests
 
-## Deploy to Railway
+- **Auto Follow** — Follow followers of target accounts
+- **Auto Unfollow** — Unfollow users from your following list
+- **Auto Like Feed** — Like posts in your home feed
+- **Mass Story View** — View stories from your feed
+- **Auto DM** — Send direct messages to users
+- **Welcome DM** — Send welcome messages to new followers
+- **Auto Approve Requests** — Approve pending follow requests
+- **Auto Comment** — Leave comments on posts
 
-1. Push this repo to GitHub
-2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
-3. Select this repo
-4. Railway auto-detects Python and uses `Procfile`
-5. Add environment variable: `FLASK_SECRET_KEY` = any random string
-6. Your app will be live at the Railway URL
-
-## Custom Domain via Cloudflare
-
-1. In Railway → Settings → Networking → Custom Domain → add your domain
-2. In Cloudflare DNS → add a CNAME record pointing to the Railway URL
-3. Set Cloudflare SSL to "Full"
-
-## Local Development
+## Installation
 
 ```bash
-pip install -r requirements.txt
+# Install dependencies
+pip install -r requirements-web.txt
+```
+
+## Running Locally
+
+```bash
 python web_app.py
 ```
-Open http://localhost:5000
 
-## Sessions
-Sessions are stored in the `sessions/` folder (gitignored). On Railway, sessions persist within a deployment but reset on redeploy. For persistent sessions, use Railway Volumes.
+Then open `http://127.0.0.1:5000` in your browser.
+
+## Login Methods
+
+1. **Browser Login** — Opens Chrome, you login yourself, bot captures session (recommended)
+2. **Password Login** — Enter username/password directly
+
+Sessions are automatically saved and loaded on subsequent visits.
+
+## Deployment
+
+### Cloudflare Workers
+
+1. Install Wrangler CLI:
+```bash
+npm install -g wrangler
+```
+
+2. Login to Cloudflare:
+```bash
+wrangler login
+```
+
+3. Deploy:
+```bash
+wrangler deploy
+```
+
+## Security
+
+- Sessions are saved locally in `sessions/` directory
+- Never share your session files
+- Use 2FA for your Instagram account
+- The bot uses safe delays (3-6 seconds) to avoid detection
+
+## Anti-Detection
+
+- Random delays between actions
+- Breaks every 15 follows
+- Session persistence to avoid repeated logins
+- User-agent spoofing for browser login
+
+## License
+
+MIT
