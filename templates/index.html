@@ -853,7 +853,7 @@
                     "login-status";
                 document.getElementById("login-status").textContent =
                     "⏳ Logging in...";
-                socket.emit("password_login", { username, password });
+                socket.emit("login", { username, password });
             }
 
             function doLogin() {
