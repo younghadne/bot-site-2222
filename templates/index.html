@@ -710,54 +710,22 @@
         </div>
 
         <script>
-            const socket = io({ transports: ["websocket", "polling"] });
-            const seenLogs = new Set();
-
-            function appendLog(message) {
-                if (!message || seenLogs.has(message)) return;
-                seenLogs.add(message);
-                const logs = document.getElementById("logs");
-                const line = document.createElement("div");
-                line.textContent = message;
-                logs.appendChild(line);
-                logs.scrollTop = logs.scrollHeight;
-            }
-
-            async function loadLogsFallback() {
-                try {
-                    const res = await fetch("/api/logs");
-                    const data = await res.json();
-                    (data.logs || []).forEach(appendLog);
-                } catch (e) {
-                    console.warn("Log fallback failed", e);
-                }
-            }
+            const socket = io();
 
             socket.on("connect", () => {
                 console.log("✅ Socket connected");
-                appendLog("✅ Dashboard connected to server");
-                loadLogsFallback();
-            });
-
-            socket.on("connect_error", (err) => {
-                console.warn("Socket connection error", err);
-                appendLog(
-                    "⚠️ Live socket not connected yet — using log fallback",
-                );
-                loadLogsFallback();
             });
 
             socket.on("disconnect", () => {
                 console.log("❌ Socket disconnected");
-                appendLog("⚠️ Dashboard disconnected — trying to reconnect");
             });
 
-            setInterval(() => {
-                if (!socket.connected) loadLogsFallback();
-            }, 5000);
-
             socket.on("log", (data) => {
-                appendLog(data.message);
+                const logs = document.getElementById("logs");
+                const line = document.createElement("div");
+                line.textContent = data.message;
+                logs.appendChild(line);
+                logs.scrollTop = logs.scrollHeight;
             });
 
             socket.on("stats", (data) => {
@@ -885,11 +853,11 @@
                     "login-status";
                 document.getElementById("login-status").textContent =
                     "⏳ Logging in...";
-                socket.emit("login", { username, password });
+                socket.emit("password_login", { username, password });
             }
 
             function doLogin() {
-                doPasswordLogin();
+                doBrowserLogin();
             }
 
             function toggleWelcomeDM() {
@@ -914,7 +882,6 @@
                 socket.emit("start_bot", {
                     targets: document.getElementById("targets").value,
                     follow_limit: document.getElementById("follow_limit").value,
-                    dm_enabled: dmEnabled,
                     like_limit: 50,
                     followers_per_account: document.getElementById(
                         "followers_per_account",

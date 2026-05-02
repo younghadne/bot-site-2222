@@ -1,378 +1,971 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instagram Bot</title>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            color: #fff; min-height: 100vh;
-        }
-        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-        h1 { text-align: center; font-size: 28px; margin-bottom: 20px; }
-        h1 span { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Instagram Bot</title>
+        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+                color: #fff;
+                min-height: 100vh;
+            }
+            .container {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            h1 {
+                text-align: center;
+                font-size: 28px;
+                margin-bottom: 20px;
+            }
+            h1 span {
+                background: linear-gradient(
+                    45deg,
+                    #f09433,
+                    #e6683c,
+                    #dc2743,
+                    #cc2366,
+                    #bc1888
+                );
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
 
-        .card {
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px; padding: 20px; margin-bottom: 16px;
-            backdrop-filter: blur(10px);
-        }
-        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; opacity: 0.8; }
+            .card {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 20px;
+                margin-bottom: 16px;
+                backdrop-filter: blur(10px);
+            }
+            .card-title {
+                font-size: 16px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                opacity: 0.8;
+            }
 
-        /* Stats */
-        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-        .stat-item { text-align: center; }
-        .stat-value { font-size: 28px; font-weight: 700; }
-        .stat-label { font-size: 12px; opacity: 0.6; margin-top: 4px; }
-        .stat-followers .stat-value { color: #4ade80; }
-        .stat-likes .stat-value { color: #fb923c; }
-        .stat-unfollowed .stat-value { color: #f87171; }
-        .stat-stories .stat-value { color: #a78bfa; }
+            /* Stats */
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 12px;
+            }
+            .stat-item {
+                text-align: center;
+            }
+            .stat-value {
+                font-size: 28px;
+                font-weight: 700;
+            }
+            .stat-label {
+                font-size: 12px;
+                opacity: 0.6;
+                margin-top: 4px;
+            }
+            .stat-followers .stat-value {
+                color: #4ade80;
+            }
+            .stat-likes .stat-value {
+                color: #fb923c;
+            }
+            .stat-unfollowed .stat-value {
+                color: #f87171;
+            }
+            .stat-stories .stat-value {
+                color: #a78bfa;
+            }
+            .stat-dms .stat-value {
+                color: #60a5fa;
+            }
 
-        /* Login */
-        .login-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
-        .login-status { font-size: 14px; margin-top: 8px; }
-        .login-status.ok { color: #4ade80; }
-        .login-status.fail { color: #f87171; }
+            /* Login */
+            .login-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr auto;
+                gap: 10px;
+                align-items: end;
+            }
+            .login-status {
+                font-size: 14px;
+                margin-top: 8px;
+            }
+            .login-status.ok {
+                color: #4ade80;
+            }
+            .login-status.fail {
+                color: #f87171;
+            }
 
-        /* Inputs */
-        input, select {
-            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 14px; width: 100%;
-            outline: none; transition: border 0.2s;
-        }
-        input:focus { border-color: rgba(255,255,255,0.4); }
-        input::placeholder { color: rgba(255,255,255,0.3); }
+            /* Inputs */
+            input,
+            select {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 10px;
+                padding: 10px 14px;
+                color: #fff;
+                font-size: 14px;
+                width: 100%;
+                outline: none;
+                transition: border 0.2s;
+            }
+            input:focus {
+                border-color: rgba(255, 255, 255, 0.4);
+            }
+            input::placeholder {
+                color: rgba(255, 255, 255, 0.3);
+            }
 
-        /* Buttons */
-        button {
-            background: linear-gradient(45deg, #dc2743, #bc1888); border: none;
-            border-radius: 10px; padding: 10px 18px; color: #fff; font-size: 14px;
-            font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s;
-            white-space: nowrap;
-        }
-        button:hover { opacity: 0.9; }
-        button:active { transform: scale(0.97); }
-        button:disabled { opacity: 0.4; cursor: not-allowed; }
-        button.secondary { background: rgba(255,255,255,0.1); }
-        button.green { background: linear-gradient(45deg, #059669, #10b981); }
-        button.orange { background: linear-gradient(45deg, #d97706, #f59e0b); }
-        button.purple { background: linear-gradient(45deg, #7c3aed, #a78bfa); }
-        button.blue { background: linear-gradient(45deg, #2563eb, #3b82f6); }
-        button.red { background: linear-gradient(45deg, #dc2626, #ef4444); }
+            /* Buttons */
+            button {
+                background: linear-gradient(45deg, #dc2743, #bc1888);
+                border: none;
+                border-radius: 10px;
+                padding: 10px 18px;
+                color: #fff;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    transform 0.1s,
+                    opacity 0.2s;
+                white-space: nowrap;
+            }
+            button:hover {
+                opacity: 0.9;
+            }
+            button:active {
+                transform: scale(0.97);
+            }
+            button:disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+            button.secondary {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            button.green {
+                background: linear-gradient(45deg, #059669, #10b981);
+            }
+            button.orange {
+                background: linear-gradient(45deg, #d97706, #f59e0b);
+            }
+            button.purple {
+                background: linear-gradient(45deg, #7c3aed, #a78bfa);
+            }
+            button.blue {
+                background: linear-gradient(45deg, #2563eb, #3b82f6);
+            }
+            button.red {
+                background: linear-gradient(45deg, #dc2626, #ef4444);
+            }
 
-        /* Settings grid */
-        .settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .field { display: flex; flex-direction: column; gap: 4px; }
-        .field label { font-size: 12px; opacity: 0.6; }
+            /* Settings grid */
+            .settings-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            .field {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .field label {
+                font-size: 12px;
+                opacity: 0.6;
+            }
 
-        /* Features */
-        .features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .feature-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; }
-        .feature-btn .icon { font-size: 24px; }
-        .feature-btn .label { font-size: 12px; }
+            /* Features */
+            .features-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+            }
+            .feature-btn {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+                padding: 14px 8px;
+            }
+            .feature-btn .icon {
+                font-size: 24px;
+            }
+            .feature-btn .label {
+                font-size: 12px;
+            }
 
-        /* Feature settings row */
-        .feat-settings { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: end; }
-        .feat-settings .field { min-width: 100px; }
+            /* Feature settings row */
+            .feat-settings {
+                display: flex;
+                gap: 10px;
+                margin-top: 12px;
+                flex-wrap: wrap;
+                align-items: end;
+            }
+            .feat-settings .field {
+                min-width: 100px;
+            }
 
-        /* Controls */
-        .controls { display: flex; gap: 10px; align-items: center; }
-        .controls .status {
-            margin-left: auto; padding: 8px 14px; border-radius: 10px;
-            background: rgba(255,255,255,0.05); font-size: 14px;
-        }
-        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-        .status-dot.on { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
-        .status-dot.off { background: #f87171; }
+            /* Controls */
+            .controls {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .controls .status {
+                margin-left: auto;
+                padding: 8px 14px;
+                border-radius: 10px;
+                background: rgba(255, 255, 255, 0.05);
+                font-size: 14px;
+            }
+            .status-dot {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                margin-right: 6px;
+            }
+            .status-dot.on {
+                background: #4ade80;
+                box-shadow: 0 0 6px #4ade80;
+            }
+            .status-dot.off {
+                background: #f87171;
+            }
 
-        /* Log */
-        #logs {
-            background: rgba(0,0,0,0.3); border-radius: 10px; padding: 14px;
-            height: 250px; overflow-y: auto; font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 13px; line-height: 1.6;
-        }
-        #logs::-webkit-scrollbar { width: 6px; }
-        #logs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+            /* Log */
+            #logs {
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 10px;
+                padding: 14px;
+                height: 250px;
+                overflow-y: auto;
+                font-family: "SF Mono", "Fira Code", monospace;
+                font-size: 13px;
+                line-height: 1.6;
+            }
+            #logs::-webkit-scrollbar {
+                width: 6px;
+            }
+            /* Toggle switch */
+            .toggle-switch {
+                position: relative;
+                display: inline-block;
+                width: 44px;
+                height: 24px;
+                flex-shrink: 0;
+            }
+            .toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .toggle-slider {
+                position: absolute;
+                cursor: pointer;
+                inset: 0;
+                background: rgba(255, 255, 255, 0.15);
+                border-radius: 24px;
+                transition: 0.3s;
+            }
+            .toggle-slider:before {
+                content: "";
+                position: absolute;
+                width: 18px;
+                height: 18px;
+                left: 3px;
+                bottom: 3px;
+                background: #fff;
+                border-radius: 50%;
+                transition: 0.3s;
+            }
+            .toggle-switch input:checked + .toggle-slider {
+                background: linear-gradient(45deg, #059669, #10b981);
+            }
+            .toggle-switch input:checked + .toggle-slider:before {
+                transform: translateX(20px);
+            }
 
-        @media (max-width: 600px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .features-grid { grid-template-columns: repeat(2, 1fr); }
-            .settings-grid { grid-template-columns: 1fr; }
-            .login-grid { grid-template-columns: 1fr; }
-        }
-    </style>
-</head>
-<body>
-<div class="container">
-    <h1><span>Instagram Bot</span></h1>
+            #logs::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.15);
+                border-radius: 3px;
+            }
 
-    <!-- Stats -->
-    <div class="card">
-        <div class="card-title">📊 Statistics</div>
-        <div class="stats-grid">
-            <div class="stat-item stat-followers">
-                <div class="stat-value" id="stat-followers">0</div>
-                <div class="stat-label">Followers Gained</div>
-            </div>
-            <div class="stat-item stat-likes">
-                <div class="stat-value" id="stat-likes">0</div>
-                <div class="stat-label">Likes Given</div>
-            </div>
-            <div class="stat-item stat-unfollowed">
-                <div class="stat-value" id="stat-unfollowed">0</div>
-                <div class="stat-label">Unfollowed</div>
-            </div>
-            <div class="stat-item stat-stories">
-                <div class="stat-value" id="stat-stories">0</div>
-                <div class="stat-label">Stories Viewed</div>
-            </div>
-        </div>
-    </div>
+            @media (max-width: 600px) {
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .features-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .settings-grid {
+                    grid-template-columns: 1fr;
+                }
+                .login-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1><span>Instagram Bot</span></h1>
 
-    <!-- Login -->
-    <div class="card">
-        <div class="card-title">🔐 Login</div>
-        <p style="opacity:0.6; margin-bottom:12px; font-size:14px;">Choose your login method:</p>
-        
-        <div style="display:flex; gap:10px; margin-bottom:12px;">
-            <button class="green" onclick="doBrowserLogin()" style="flex:1; padding:14px; font-size:14px;">🌐 Browser Login</button>
-            <button class="secondary" onclick="togglePasswordLogin()" style="flex:1; padding:14px; font-size:14px;">🔑 Password Login</button>
-        </div>
-        
-        <div id="password-login-section" style="display:none; margin-top:12px;">
-            <div class="login-grid">
-                <div class="field">
-                    <label>Username</label>
-                    <input type="text" id="username" placeholder="your_username">
+            <!-- Stats -->
+            <div class="card">
+                <div class="card-title">📊 Statistics</div>
+                <div class="stats-grid">
+                    <div class="stat-item stat-followers">
+                        <div class="stat-value" id="stat-followers">0</div>
+                        <div class="stat-label">Followers Gained</div>
+                    </div>
+                    <div class="stat-item stat-likes">
+                        <div class="stat-value" id="stat-likes">0</div>
+                        <div class="stat-label">Likes Given</div>
+                    </div>
+                    <div class="stat-item stat-unfollowed">
+                        <div class="stat-value" id="stat-unfollowed">0</div>
+                        <div class="stat-label">Unfollowed</div>
+                    </div>
+                    <div class="stat-item stat-stories">
+                        <div class="stat-value" id="stat-stories">0</div>
+                        <div class="stat-label">Stories Viewed</div>
+                    </div>
+                    <div class="stat-item stat-dms">
+                        <div class="stat-value" id="stat-dms">0</div>
+                        <div class="stat-label">DMs Sent</div>
+                    </div>
                 </div>
-                <div class="field">
-                    <label>Password</label>
-                    <input type="password" id="password" placeholder="••••••••">
+            </div>
+
+            <!-- 2FA Modal -->
+            <div
+                id="twofa-modal"
+                style="
+                    display: none;
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0, 0, 0, 0.75);
+                    z-index: 999;
+                    align-items: center;
+                    justify-content: center;
+                "
+            >
+                <div
+                    style="
+                        background: #1e1b4b;
+                        border: 1px solid #4f46e5;
+                        border-radius: 16px;
+                        padding: 32px;
+                        width: 340px;
+                        max-width: 90vw;
+                        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+                    "
+                >
+                    <div
+                        style="
+                            font-size: 22px;
+                            font-weight: 700;
+                            margin-bottom: 8px;
+                        "
+                    >
+                        🔐 Two-Factor Auth
+                    </div>
+                    <p
+                        style="
+                            opacity: 0.7;
+                            font-size: 14px;
+                            margin-bottom: 20px;
+                        "
+                    >
+                        Enter the 6-digit code from your authenticator app or
+                        SMS.
+                    </p>
+                    <input
+                        type="text"
+                        id="twofa-code"
+                        maxlength="6"
+                        placeholder="000000"
+                        style="
+                            width: 100%;
+                            padding: 14px;
+                            font-size: 22px;
+                            letter-spacing: 8px;
+                            text-align: center;
+                            border-radius: 10px;
+                            border: 2px solid #4f46e5;
+                            background: #0f0c29;
+                            color: #fff;
+                            outline: none;
+                            margin-bottom: 16px;
+                        "
+                    />
+                    <div style="display: flex; gap: 10px">
+                        <button
+                            class="green"
+                            style="flex: 1"
+                            onclick="submitTwoFA()"
+                        >
+                            ✅ Verify
+                        </button>
+                        <button
+                            class="red"
+                            style="flex: 1"
+                            onclick="closeTwoFAModal()"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                    <div
+                        class="login-status"
+                        id="twofa-error"
+                        style="margin-top: 10px"
+                    ></div>
                 </div>
-                <button onclick="doPasswordLogin()">Login</button>
+            </div>
+
+            <!-- Login -->
+            <div class="card">
+                <div class="card-title">🔐 Login</div>
+                <div id="password-login-section">
+                    <div class="login-grid">
+                        <div class="field">
+                            <label>Username</label>
+                            <input
+                                type="text"
+                                id="username"
+                                placeholder="your_username"
+                                autocomplete="username"
+                            />
+                        </div>
+                        <div class="field">
+                            <label>Password</label>
+                            <input
+                                type="password"
+                                id="password"
+                                placeholder="••••••••"
+                                autocomplete="current-password"
+                                onkeydown="
+                                    if (event.key === 'Enter')
+                                        doPasswordLogin();
+                                "
+                            />
+                        </div>
+                        <button
+                            class="green"
+                            onclick="doPasswordLogin()"
+                            style="height: 42px; align-self: end"
+                        >
+                            Login
+                        </button>
+                    </div>
+                </div>
+
+                <div class="login-status" id="login-status"></div>
+            </div>
+
+            <!-- Settings -->
+            <div class="card">
+                <div class="card-title">⚙️ Settings</div>
+                <div class="settings-grid">
+                    <div class="field">
+                        <label>Target Accounts (comma separated)</label>
+                        <input
+                            type="text"
+                            id="targets"
+                            placeholder="champagnepapi, drake"
+                        />
+                    </div>
+                    <div class="field">
+                        <label>Daily Follow Limit</label>
+                        <input type="number" id="follow_limit" value="120" />
+                    </div>
+                    <div class="field">
+                        <label>Followers per Account</label>
+                        <input
+                            type="number"
+                            id="followers_per_account"
+                            value="10"
+                        />
+                    </div>
+                </div>
+                <!-- Welcome DM Toggle -->
+                <div
+                    style="
+                        margin-top: 14px;
+                        background: rgba(255, 255, 255, 0.04);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        border-radius: 12px;
+                        padding: 14px;
+                    "
+                >
+                    <div
+                        style="
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            margin-bottom: 10px;
+                        "
+                    >
+                        <label class="toggle-switch">
+                            <input
+                                type="checkbox"
+                                id="welcome_dm_toggle"
+                                onchange="toggleWelcomeDM()"
+                            />
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span style="font-size: 14px; font-weight: 600"
+                            >💬 Send Welcome DM to every person followed</span
+                        >
+                    </div>
+                    <div id="welcome_dm_box" style="display: none">
+                        <textarea
+                            id="welcome_message"
+                            rows="3"
+                            placeholder="Hey! I just followed you 👋 Check out my page!"
+                            style="
+                                width: 100%;
+                                padding: 10px 14px;
+                                border-radius: 10px;
+                                border: 1px solid rgba(255, 255, 255, 0.2);
+                                background: rgba(255, 255, 255, 0.08);
+                                color: #fff;
+                                font-size: 14px;
+                                resize: vertical;
+                                outline: none;
+                                font-family: inherit;
+                            "
+                        ></textarea>
+                        <p
+                            style="
+                                font-size: 12px;
+                                opacity: 0.5;
+                                margin-top: 6px;
+                            "
+                        >
+                            ✅ This message will be sent automatically to
+                            <strong>every account the bot follows</strong>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="card">
+                <div class="controls">
+                    <button class="green" onclick="startBot()">
+                        🚀 Start Bot
+                    </button>
+                    <button class="red" onclick="stopBot()">🛑 Stop</button>
+                    <button class="orange" onclick="stopFeature()">
+                        ⏹️ Stop Feature
+                    </button>
+                    <button class="secondary" onclick="resetStats()">
+                        🔄 Reset
+                    </button>
+                    <div class="status">
+                        <span class="status-dot off" id="status-dot"></span>
+                        <span id="status-text">Ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="card">
+                <div class="card-title">🎯 Features</div>
+                <div class="features-grid">
+                    <button class="orange feature-btn" onclick="autoUnfollow()">
+                        <span class="icon">🔄</span
+                        ><span class="label">Auto Unfollow</span>
+                    </button>
+                    <button class="purple feature-btn" onclick="autoLikeFeed()">
+                        <span class="icon">❤️</span
+                        ><span class="label">Auto Like Feed</span>
+                    </button>
+                    <button class="blue feature-btn" onclick="massStoryView()">
+                        <span class="icon">👁️</span
+                        ><span class="label">Mass Story View</span>
+                    </button>
+                    <button
+                        class="green feature-btn"
+                        onclick="approveRequests()"
+                    >
+                        <span class="icon">✅</span
+                        ><span class="label">Approve Requests</span>
+                    </button>
+                    <button class="orange feature-btn" onclick="autoDM()">
+                        <span class="icon">💬</span
+                        ><span class="label">Auto DM</span>
+                    </button>
+                    <button
+                        class="purple feature-btn"
+                        onclick="likeUserPosts()"
+                    >
+                        <span class="icon">❤️</span
+                        ><span class="label">Like User Posts</span>
+                    </button>
+                    <button class="blue feature-btn" onclick="welcomeDM()">
+                        <span class="icon">📩</span
+                        ><span class="label">Welcome DM</span>
+                    </button>
+                    <button class="secondary feature-btn" onclick="clearLogs()">
+                        <span class="icon">🧹</span
+                        ><span class="label">Clear Logs</span>
+                    </button>
+                    <button class="purple feature-btn" onclick="autoComment()">
+                        <span class="icon">💬</span
+                        ><span class="label">Auto Comment</span>
+                    </button>
+                </div>
+                <div class="feat-settings">
+                    <div class="field">
+                        <label>Unfollow Limit</label>
+                        <input type="number" id="unfollow_limit" value="50" />
+                    </div>
+                    <div class="field">
+                        <label>Like Limit</label>
+                        <input type="number" id="like_feed_limit" value="20" />
+                    </div>
+                    <div class="field">
+                        <label>Story Limit</label>
+                        <input type="number" id="story_limit" value="50" />
+                    </div>
+                    <div class="field">
+                        <label>DM Target (optional)</label>
+                        <input
+                            type="text"
+                            id="dm_target"
+                            placeholder="username or leave empty for following list"
+                        />
+                    </div>
+                    <div class="field">
+                        <label>DM Limit (for following list)</label>
+                        <input type="number" id="dm_limit" value="50" />
+                    </div>
+                    <div class="field">
+                        <label>DM Message</label>
+                        <input
+                            type="text"
+                            id="dm_message"
+                            placeholder="Hey! Thanks for following 🙏"
+                        />
+                    </div>
+                    <div class="field">
+                        <label>Like Target Username</label>
+                        <input
+                            type="text"
+                            id="like_target"
+                            placeholder="username to like posts from"
+                        />
+                    </div>
+                    <div class="field">
+                        <label>Like Posts Limit</label>
+                        <input type="number" id="like_user_limit" value="5" />
+                    </div>
+                    <div class="field">
+                        <label>Comment Target</label>
+                        <input
+                            type="text"
+                            id="comment_target"
+                            placeholder="username"
+                        />
+                    </div>
+                    <div class="field">
+                        <label>Comments (comma separated)</label>
+                        <input
+                            type="text"
+                            id="comments"
+                            placeholder="Great post!, 🔥, Amazing!"
+                        />
+                    </div>
+                    <div class="field">
+                        <label>Comment Limit</label>
+                        <input type="number" id="comment_limit" value="10" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs -->
+            <div class="card">
+                <div class="card-title">📝 Logs</div>
+                <div id="logs"></div>
             </div>
         </div>
-        
-        <div class="login-status" id="login-status"></div>
-    </div>
 
-    <!-- Settings -->
-    <div class="card">
-        <div class="card-title">⚙️ Settings</div>
-        <div class="settings-grid">
-            <div class="field">
-                <label>Target Accounts (comma separated)</label>
-                <input type="text" id="targets" placeholder="champagnepapi, drake">
-            </div>
-            <div class="field">
-                <label>Daily Follow Limit</label>
-                <input type="number" id="follow_limit" value="120">
-            </div>
-            <div class="field">
-                <label>Followers per Account</label>
-                <input type="number" id="followers_per_account" value="10">
-            </div>
-        </div>
-    </div>
+        <script>
+            const socket = io();
 
-    <!-- Controls -->
-    <div class="card">
-        <div class="controls">
-            <button class="green" onclick="startBot()">🚀 Start Bot</button>
-            <button class="red" onclick="stopBot()">🛑 Stop</button>
-            <button class="secondary" onclick="resetStats()">🔄 Reset</button>
-            <div class="status">
-                <span class="status-dot off" id="status-dot"></span>
-                <span id="status-text">Ready</span>
-            </div>
-        </div>
-    </div>
+            socket.on("connect", () => {
+                console.log("✅ Socket connected");
+            });
 
-    <!-- Features -->
-    <div class="card">
-        <div class="card-title">🎯 Features</div>
-        <div class="features-grid">
-            <button class="orange feature-btn" onclick="autoUnfollow()">
-                <span class="icon">🔄</span><span class="label">Auto Unfollow</span>
-            </button>
-            <button class="purple feature-btn" onclick="autoLikeFeed()">
-                <span class="icon">❤️</span><span class="label">Auto Like Feed</span>
-            </button>
-            <button class="blue feature-btn" onclick="massStoryView()">
-                <span class="icon">👁️</span><span class="label">Mass Story View</span>
-            </button>
-            <button class="green feature-btn" onclick="approveRequests()">
-                <span class="icon">✅</span><span class="label">Approve Requests</span>
-            </button>
-            <button class="orange feature-btn" onclick="autoDM()">
-                <span class="icon">💬</span><span class="label">Auto DM</span>
-            </button>
-            <button class="purple feature-btn" onclick="likeUserPosts()">
-                <span class="icon">❤️</span><span class="label">Like User Posts</span>
-            </button>
-            <button class="blue feature-btn" onclick="welcomeDM()">
-                <span class="icon">📩</span><span class="label">Welcome DM</span>
-            </button>
-            <button class="secondary feature-btn" onclick="clearLogs()">
-                <span class="icon">🧹</span><span class="label">Clear Logs</span>
-            </button>
-        </div>
-        <div class="feat-settings">
-            <div class="field">
-                <label>Unfollow Limit</label>
-                <input type="number" id="unfollow_limit" value="50">
-            </div>
-            <div class="field">
-                <label>Like Limit</label>
-                <input type="number" id="like_feed_limit" value="20">
-            </div>
-            <div class="field">
-                <label>Story Limit</label>
-                <input type="number" id="story_limit" value="50">
-            </div>
-            <div class="field">
-                <label>DM Target</label>
-                <input type="text" id="dm_target" placeholder="username">
-            </div>
-            <div class="field">
-                <label>DM Message</label>
-                <input type="text" id="dm_message" placeholder="Hey! Thanks for following 🙏">
-            </div>
-        </div>
-    </div>
+            socket.on("disconnect", () => {
+                console.log("❌ Socket disconnected");
+            });
 
-    <!-- Logs -->
-    <div class="card">
-        <div class="card-title">📝 Logs</div>
-        <div id="logs"></div>
-    </div>
-</div>
+            socket.on("log", (data) => {
+                const logs = document.getElementById("logs");
+                const line = document.createElement("div");
+                line.textContent = data.message;
+                logs.appendChild(line);
+                logs.scrollTop = logs.scrollHeight;
+            });
 
-<script>
-const socket = io();
+            socket.on("stats", (data) => {
+                document.getElementById("stat-followers").textContent =
+                    data.followers_gained;
+                document.getElementById("stat-likes").textContent =
+                    data.likes_given;
+                document.getElementById("stat-unfollowed").textContent =
+                    data.unfollowed;
+                document.getElementById("stat-stories").textContent =
+                    data.stories_viewed;
+                document.getElementById("stat-dms").textContent = data.dms_sent;
+            });
 
-socket.on('connect', () => {
-    console.log('✅ Socket connected');
-});
+            socket.on("bot_status", (data) => {
+                const dot = document.getElementById("status-dot");
+                const text = document.getElementById("status-text");
+                if (data.running) {
+                    dot.className = "status-dot on";
+                    text.textContent = "Running";
+                } else {
+                    dot.className = "status-dot off";
+                    text.textContent = "Stopped";
+                }
+            });
 
-socket.on('disconnect', () => {
-    console.log('❌ Socket disconnected');
-});
+            socket.on("login_status", (data) => {
+                const el = document.getElementById("login-status");
+                if (data.success) {
+                    el.className = "login-status ok";
+                    el.textContent = "✅ Logged in as @" + data.username;
+                    closeTwoFAModal();
+                    document.getElementById("password").value = "";
+                } else {
+                    el.className = "login-status fail";
+                    el.textContent = "❌ " + (data.error || "Login failed");
+                }
+            });
 
-socket.on('log', (data) => {
-    const logs = document.getElementById('logs');
-    const line = document.createElement('div');
-    line.textContent = data.message;
-    logs.appendChild(line);
-    logs.scrollTop = logs.scrollHeight;
-});
+            socket.on("two_fa_required", (data) => {
+                if (data.required) openTwoFAModal();
+            });
 
-socket.on('stats', (data) => {
-    document.getElementById('stat-followers').textContent = data.followers_gained;
-    document.getElementById('stat-likes').textContent = data.likes_given;
-    document.getElementById('stat-unfollowed').textContent = data.unfollowed;
-    document.getElementById('stat-stories').textContent = data.stories_viewed;
-});
+            socket.on("feature_status", (data) => {
+                const dot = document.getElementById("status-dot");
+                const text = document.getElementById("status-text");
+                if (data.running) {
+                    dot.className = "status-dot on";
+                    text.textContent = data.name + " running...";
+                } else {
+                    dot.className = "status-dot off";
+                    text.textContent = "Idle";
+                }
+            });
 
-socket.on('bot_status', (data) => {
-    const dot = document.getElementById('status-dot');
-    const text = document.getElementById('status-text');
-    if (data.running) {
-        dot.className = 'status-dot on';
-        text.textContent = 'Running';
-    } else {
-        dot.className = 'status-dot off';
-        text.textContent = 'Stopped';
-    }
-});
+            socket.on("session_expired", () => {
+                const el = document.getElementById("login-status");
+                el.className = "login-status fail";
+                el.textContent = "⚠️ Session expired — please log in again";
+                // Scroll to login card
+                document
+                    .querySelector(".card")
+                    .scrollIntoView({ behavior: "smooth" });
+            });
 
-socket.on('login_status', (data) => {
-    const el = document.getElementById('login-status');
-    if (data.success) {
-        el.className = 'login-status ok';
-        el.textContent = '✅ Logged in as @' + data.username;
-    } else {
-        el.className = 'login-status fail';
-        el.textContent = '❌ Login failed';
-    }
-});
+            function openTwoFAModal() {
+                const modal = document.getElementById("twofa-modal");
+                modal.style.display = "flex";
+                document.getElementById("twofa-code").value = "";
+                document.getElementById("twofa-error").textContent = "";
+                setTimeout(
+                    () => document.getElementById("twofa-code").focus(),
+                    100,
+                );
+            }
 
-function togglePasswordLogin() {
-    const section = document.getElementById('password-login-section');
-    section.style.display = section.style.display === 'none' ? 'block' : 'none';
-}
+            function closeTwoFAModal() {
+                document.getElementById("twofa-modal").style.display = "none";
+            }
 
-function doBrowserLogin() {
-    document.getElementById('login-status').className = 'login-status';
-    document.getElementById('login-status').textContent = '⏳ Opening browser...';
-    socket.emit('browser_login', {});
-}
+            function submitTwoFA() {
+                const code = document.getElementById("twofa-code").value.trim();
+                if (!code) {
+                    document.getElementById("twofa-error").className =
+                        "login-status fail";
+                    document.getElementById("twofa-error").textContent =
+                        "❌ Please enter the code";
+                    return;
+                }
+                document.getElementById("twofa-error").className =
+                    "login-status";
+                document.getElementById("twofa-error").textContent =
+                    "⏳ Verifying...";
+                socket.emit("two_fa_code", { code });
+            }
 
-function doPasswordLogin() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    if (!username || !password) {
-        document.getElementById('login-status').className = 'login-status fail';
-        document.getElementById('login-status').textContent = '❌ Enter username and password';
-        return;
-    }
-    document.getElementById('login-status').className = 'login-status';
-    document.getElementById('login-status').textContent = '⏳ Logging in...';
-    socket.emit('password_login', { username, password });
-}
+            document.addEventListener("keydown", (e) => {
+                if (
+                    e.key === "Enter" &&
+                    document.getElementById("twofa-modal").style.display ===
+                        "flex"
+                )
+                    submitTwoFA();
+            });
 
-function doLogin() {
-    doBrowserLogin();
-}
+            function doBrowserLogin() {
+                document.getElementById("login-status").className =
+                    "login-status";
+                document.getElementById("login-status").textContent =
+                    "⏳ Opening browser...";
+                socket.emit("browser_login", {});
+            }
 
-function startBot() {
-    socket.emit('start_bot', {
-        targets: document.getElementById('targets').value,
-        follow_limit: document.getElementById('follow_limit').value,
-        like_limit: 50,
-        followers_per_account: document.getElementById('followers_per_account').value,
-    });
-}
+            function doPasswordLogin() {
+                const username = document.getElementById("username").value;
+                const password = document.getElementById("password").value;
+                if (!username || !password) {
+                    document.getElementById("login-status").className =
+                        "login-status fail";
+                    document.getElementById("login-status").textContent =
+                        "❌ Enter username and password";
+                    return;
+                }
+                document.getElementById("login-status").className =
+                    "login-status";
+                document.getElementById("login-status").textContent =
+                    "⏳ Logging in...";
+                socket.emit("password_login", { username, password });
+            }
 
-function stopBot() { socket.emit('stop_bot'); }
-function resetStats() { socket.emit('reset_stats'); }
+            function doLogin() {
+                doBrowserLogin();
+            }
 
-function autoUnfollow() {
-    socket.emit('auto_unfollow', { limit: document.getElementById('unfollow_limit').value });
-}
-function autoLikeFeed() {
-    socket.emit('auto_like_feed', { limit: document.getElementById('like_feed_limit').value });
-}
-function massStoryView() {
-    socket.emit('mass_story_view', { limit: document.getElementById('story_limit').value });
-}
-function approveRequests() { socket.emit('approve_requests'); }
-function autoDM() {
-    socket.emit('auto_dm', {
-        target: document.getElementById('dm_target').value,
-        message: document.getElementById('dm_message').value,
-    });
-}
-function likeUserPosts() {
-    socket.emit('like_user_posts', {
-        target: document.getElementById('dm_target').value,
-        limit: 3,
-    });
-}
-function welcomeDM() {
-    socket.emit('auto_dm', {
-        target: document.getElementById('dm_target').value,
-        message: 'Hey! Thanks for following me 🙏',
-    });
-}
-function clearLogs() {
-    document.getElementById('logs').innerHTML = '';
-}
-</script>
-</body>
+            function toggleWelcomeDM() {
+                const on = document.getElementById("welcome_dm_toggle").checked;
+                document.getElementById("welcome_dm_box").style.display = on
+                    ? "block"
+                    : "none";
+            }
+
+            function startBot() {
+                const dmEnabled =
+                    document.getElementById("welcome_dm_toggle").checked;
+                const msg = dmEnabled
+                    ? document.getElementById("welcome_message").value.trim()
+                    : "";
+                if (dmEnabled && !msg) {
+                    alert(
+                        "Please enter a Welcome DM message, or turn off the toggle.",
+                    );
+                    return;
+                }
+                socket.emit("start_bot", {
+                    targets: document.getElementById("targets").value,
+                    follow_limit: document.getElementById("follow_limit").value,
+                    like_limit: 50,
+                    followers_per_account: document.getElementById(
+                        "followers_per_account",
+                    ).value,
+                    welcome_message: msg,
+                });
+            }
+
+            function stopBot() {
+                socket.emit("stop_bot");
+            }
+            function resetStats() {
+                socket.emit("reset_stats");
+            }
+
+            function autoUnfollow() {
+                socket.emit("auto_unfollow", {
+                    limit: document.getElementById("unfollow_limit").value,
+                });
+            }
+            function autoLikeFeed() {
+                socket.emit("auto_like_feed", {
+                    limit: document.getElementById("like_feed_limit").value,
+                });
+            }
+            function massStoryView() {
+                socket.emit("mass_story_view", {
+                    limit: document.getElementById("story_limit").value,
+                });
+            }
+            function approveRequests() {
+                socket.emit("approve_requests");
+            }
+            function autoDM() {
+                socket.emit("auto_dm", {
+                    target: document.getElementById("dm_target").value,
+                    limit: document.getElementById("dm_limit").value,
+                    message: document.getElementById("dm_message").value,
+                });
+            }
+            function likeUserPosts() {
+                const target = document
+                    .getElementById("like_target")
+                    .value.trim();
+                if (!target) {
+                    alert("Enter a username in 'Like Target Username'");
+                    return;
+                }
+                socket.emit("like_user_posts", {
+                    target: target,
+                    limit:
+                        parseInt(
+                            document.getElementById("like_user_limit").value,
+                        ) || 5,
+                });
+            }
+            function autoComment() {
+                const target = document
+                    .getElementById("comment_target")
+                    .value.trim();
+                if (!target) {
+                    alert("Enter a target username for Auto Comment");
+                    return;
+                }
+                socket.emit("auto_comment", {
+                    target: target,
+                    comments: document.getElementById("comments").value,
+                    limit: document.getElementById("comment_limit").value,
+                });
+            }
+            function stopFeature() {
+                socket.emit("stop_feature");
+            }
+            function welcomeDM() {
+                socket.emit("welcome_dm", {
+                    message:
+                        document.getElementById("dm_message").value ||
+                        "Hey! Thanks for following me 🙏",
+                    limit: document.getElementById("dm_limit").value,
+                });
+            }
+            function clearLogs() {
+                document.getElementById("logs").innerHTML = "";
+            }
+        </script>
+    </body>
 </html>
