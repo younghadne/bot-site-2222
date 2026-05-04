@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  bot:
+    build: .
+    container_name: spotify-bot
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - bot-cookies:/root/.spotify_bot_cookies
+      - bot-profiles:/root/.spotify_bot_profiles
+    environment:
+      - PORT=8000
+    networks:
+      - bot-network
+
+  # Cloudflare Tunnel — exposes the bot to your domain
+  # Replace <TUNNEL_TOKEN> with your actual token from Cloudflare dashboard
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - bot
+    networks:
+      - bot-network
+
+volumes:
+  bot-cookies:
+  bot-profiles:
+
+networks:
+  bot-network:
+    driver: bridge

@@ -1,73 +1,145 @@
-# Instagram Bot Web App
+# Stealth Spotify Bot
 
-A web-based Instagram automation bot with multiple features including auto-follow, auto-unfollow, auto-like, mass story viewing, and DM automation.
+Multi-threaded Spotify streaming bot with a web dashboard. Uses Selenium for browser automation with stealth fingerprinting.
 
 ## Features
 
-- **Auto Follow** — Follow followers of target accounts
-- **Auto Unfollow** — Unfollow users from your following list
-- **Auto Like Feed** — Like posts in your home feed
-- **Mass Story View** — View stories from your feed
-- **Auto DM** — Send direct messages to users
-- **Welcome DM** — Send welcome messages to new followers
-- **Auto Approve Requests** — Approve pending follow requests
-- **Auto Comment** — Leave comments on posts
+- Web-based dashboard (dark Spotify-themed UI)
+- Multi-threaded playback with configurable thread count
+- Stealth browser fingerprinting (mobile emulation, random user agents)
+- Cookie-based authentication (import Spotify cookies)
+- Proxy support (manual + SmartProxy preset)
+- Real-time activity logs
+- Health check endpoint at `/health`
 
-## Installation
+## Project Structure
 
-```bash
-# Install dependencies
-pip install -r requirements-web.txt
 ```
-
-## Running Locally
-
-```bash
-python web_app.py
+├── bot_engine.py       # Core bot logic (Selenium automation)
+├── main.py             # FastAPI server + API endpoints
+├── static/
+│   └── index.html      # Self-contained dashboard UI
+├── requirements.txt    # Python dependencies
+├── Dockerfile          # Container with Chrome pre-installed
+├── docker-compose.yml  # Bot + Cloudflare Tunnel
+├── .env.example        # Environment variable template
+└── start.sh            # Quick start script
 ```
-
-Then open `http://127.0.0.1:5000` in your browser.
-
-## Login Methods
-
-1. **Browser Login** — Opens Chrome, you login yourself, bot captures session (recommended)
-2. **Password Login** — Enter username/password directly
-
-Sessions are automatically saved and loaded on subsequent visits.
 
 ## Deployment
 
-### Cloudflare Workers
+### Option 1: Docker + Cloudflare Tunnel (Recommended)
 
-1. Install Wrangler CLI:
+This exposes your bot via a Cloudflare domain with DDoS protection, SSL, and CDN caching — all for free.
+
+#### 1. Create a Cloudflare Tunnel
+
+1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) → **Networking** → **Tunnels**
+2. Click **Create Tunnel** → name it (e.g. `spotify-bot`)
+3. Skip the install step (Docker handles it)
+4. Under **Routes**, add a **Published Application**:
+   - **Subdomain**: `bot` (or whatever you want)
+   - **Domain**: select your Cloudflare domain
+   - **Service URL**: `http://bot:8000`
+5. Copy the **tunnel token** from the install command
+
+#### 2. Configure and Run
+
 ```bash
-npm install -g wrangler
+# Clone the repo
+git clone https://github.com/YOUR_USERNAME/spotify-bot-cloudflare.git
+cd spotify-bot-cloudflare
+
+# Set up environment
+cp .env.example .env
+# Edit .env and paste your CLOUDFLARE_TUNNEL_TOKEN
+
+# Start everything
+docker compose up -d --build
+
+# View logs
+docker compose logs -f bot
 ```
 
-2. Login to Cloudflare:
+Your dashboard is now live at `https://bot.yourdomain.com`
+
+#### Useful Commands
+
 ```bash
-wrangler login
+docker compose down          # Stop everything
+docker compose restart bot   # Restart the bot
+docker compose logs -f       # Follow all logs
 ```
 
-3. Deploy:
+---
+
+### Option 2: Quick Tunnel (No domain needed)
+
+For testing — generates a random `trycloudflare.com` URL:
+
 ```bash
-wrangler deploy
+# Start the bot
+docker compose up -d --build bot
+
+# In another terminal, create a quick tunnel
+docker run --rm --network spotify-bot-cloudflare_bot-network \
+  cloudflare/cloudflared:latest tunnel --url http://bot:8000
 ```
 
-## Security
+The URL printed in the terminal is your public dashboard link.
 
-- Sessions are saved locally in `sessions/` directory
-- Never share your session files
-- Use 2FA for your Instagram account
-- The bot uses safe delays (3-6 seconds) to avoid detection
+---
 
-## Anti-Detection
+### Option 3: VPS without Docker
 
-- Random delays between actions
-- Breaks every 15 follows
-- Session persistence to avoid repeated logins
-- User-agent spoofing for browser login
+```bash
+# Install Chrome
+wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install -y /tmp/chrome.deb
 
-## License
+# Clone and setup
+git clone https://github.com/YOUR_USERNAME/spotify-bot-cloudflare.git
+cd spotify-bot-cloudflare
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
-MIT
+# Run
+python main.py
+# Bot runs on http://localhost:8000
+
+# (Optional) Expose with cloudflared
+cloudflared tunnel --url http://localhost:8000
+```
+
+---
+
+### Option 4: Google Colab
+
+Use the `Spotify_Bot_Colab_Full.ipynb` notebook (see releases).
+
+---
+
+## Getting Spotify Cookies
+
+1. Install a browser extension like [Cookie-Editor](https://cookie-editor.cgagnier.ca/)
+2. Log in to [open.spotify.com](https://open.spotify.com)
+3. Export cookies as JSON
+4. Upload the JSON file via the dashboard's **Import Cookies** button
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Dashboard UI |
+| `GET` | `/health` | Health check |
+| `GET` | `/api/bot` | Get bot state |
+| `POST` | `/api/bot` | Send action/settings |
+| `POST` | `/api/bot/upload-cookies` | Upload cookie file |
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8000` | Server port |
+| `CLOUDFLARE_TUNNEL_TOKEN` | — | Cloudflare Tunnel token |
